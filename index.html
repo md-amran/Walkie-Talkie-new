@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Talk - Real-time Voice Chat</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="radio.png">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Login Check Overlay -->
+    <div id="authOverlay" class="auth-overlay" style="display: none;">
+        <div class="auth-modal">
+            <div class="spinner"></div>
+            <h3>Checking Authentication...</h3>
+            <p>Please wait while we verify your session</p>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <!-- Header Section -->
+<header class="app-header">
+    <div class="header-top">
+        <h1></i> Wave Talk</h1>
+        <div class="user-menu" id="userMenu">
+            <button class="user-menu-btn" id="userMenuBtn">
+                <i class="fas fa-user-circle"></i>
+                <span id="userName">Loading...</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-email" id="userEmail">user@example.com</div>
+                        <div class="user-id-small" id="userIdSmall">ID: Loading...</div>
+                    </div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+    <p class="app-tagline">Real-time voice chat app</p>
+</header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- User Info Section -->
+            <section class="card user-info-card">
+                <h2><i class="fas fa-user"></i> Your Profile</h2>
+                <div class="user-id-container">
+                    <p class="label">Your Wave Talk ID:</p>
+                    <div id="myId" class="user-id" title="Click to copy">
+                        <span class="id-text" id="idText">Loading...</span>
+                        <span class="copy-icon"><i class="fas fa-copy"></i></span>
+                    </div>
+                    <p class="hint">Click on ID to copy</p>
+                </div>
+                
+                <div class="user-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-bolt"></i>
+                        <div class="stat-content">
+                            <div class="stat-label">Status</div>
+                            <div class="stat-value" id="userStatus">Online</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <div class="stat-content">
+                            <div class="stat-label">Account Type</div>
+                            <div class="stat-value" id="accountType">Free</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Connection Section -->
+<section class="card connection-card">
+    <h2><i class="fas fa-phone-alt"></i> Connect with Friend</h2>
+    <div class="connection-input-group">
+        <input 
+            type="text" 
+            id="friendId" 
+            placeholder="Enter friend's Walkie ID" 
+            class="friend-input"
+            autocomplete="off"
+        >
+        <button id="syncButton" class="call-button">
+            <span class="button-icon"><i class="fas fa-phone"></i></span>
+            <span class="button-text">Call Friend</span>
+        </button>
+    </div>
+    
+    <!-- New Group Call Button -->
+    <div class="group-call-section" style="margin-top: 15px; text-align: center;">
+        <button id="groupCallButton" class="call-button" style="background: var(rgb(119, 8, 8));">
+            <span class="button-icon"><i class="fas fa-users"></i></span>
+            <span class="button-text">Group Call</span>
+        </button>
+    </div>
+    <!-- Connection Section এর Group Call Section এর পরে যোগ করুন -->
+<div class="contact-section" style="margin-top: 4px; text-align: center;">
+    <button id="contactListButton" class="call-button">
+        <span class="button-icon"><i class="fas fa-address-book"></i></span>
+        <span class="button-text">Contact List</span>
+    </button>
+</div>
+    <div class="call-controls">
+        <button id="disconnectButton" class="disconnect-button" style="display: none;">
+            <span class="button-icon"><i class="fas fa-phone-slash"></i></span>
+            <span class="button-text">End Call</span>
+        </button>
+    </div>
+</section>
+
+
+
+            <!-- Status Display -->
+            <section class="card status-card">
+                <h2><i class="fas fa-satellite-dish"></i> Connection Status</h2>
+                <div id="status" class="status-message info">
+                    <div class="status-icon"><i class="fas fa-signal"></i></div>
+                    <div class="status-content">
+                        <div class="status-title" id="statusTitle">Ready to connect</div>
+                        <div class="status-details" id="statusDetails">Waiting for connection...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Talk Button Section -->
+            <section class="card talk-section">
+                <h2><i class="fas fa-microphone"></i> Push-to-Talk</h2>
+                <div class="talk-container">
+                    <div id="talkButton" class="talk-button">
+                        <div class="talk-content">
+                            <div class="talk-icon"><i class="fas fa-microphone"></i></div>
+                            <div class="talk-text">Hold to Talk</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Wave Effect -->
+                    <div class="wave-container" id="waveContainer" style="display: none;">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                    
+                    <div class="audio-indicator">
+                        <div class="audio-level-bar">
+                            <div class="audio-level-fill" id="audioLevel"></div>
+                        </div>
+                        <div class="audio-status" id="audioStatus">Mic: Ready</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Audio Player -->
+            <section class="card audio-card">
+                <h2><i class="fas fa-volume-up"></i> Remote Audio</h2>
+                <div class="audio-player-container">
+                    <audio id="remoteAudio" controls class="audio-player">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <div class="audio-controls">
+                        <button id="muteButton" class="audio-control-btn">
+                            <span class="control-icon"><i class="fas fa-volume-up"></i></span>
+                            <span class="button-text">Mute</span>
+                        </button>
+                        <button id="volumeUp" class="audio-control-btn">
+                            <span class="control-icon"><i class="fas fa-volume-up"></i></span>
+                            <span class="button-text">Vol+</span>
+                        </button>
+                        <button id="volumeDown" class="audio-control-btn">
+                            <span class="control-icon"><i class="fas fa-volume-down"></i></span>
+                            <span class="button-text">Vol-</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Instructions -->
+            <section class="card instructions-card">
+                <h2><i class="fas fa-info-circle"></i> How to Use</h2>
+                <div class="instructions-list">
+                    <div class="instruction-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Login with Email</h3>
+                            <p>Sign in to get your permanent Wave Talk ID</p>
+                        </div>
+                    </div>
+                    <div class="instruction-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Share Your ID</h3>
+                            <p>Copy your permanent ID and share with friends</p>
+                        </div>
+                    </div>
+                    <div class="instruction-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Start Call</h3>
+                            <p>Enter friend's ID and click "Call Friend"</p>
+                        </div>
+                    </div>
+                    <div class="instruction-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>Talk & Listen</h3>
+                            <p>Hold the button to talk, release to listen</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+<footer class="app-footer">
+    <p><i class="fas fa-code"></i> Wave Talk App v3.0 | Secure Authentication Enabled</p>
+    <p class="developer-credit">
+        <i class="fas fa-user-tie"></i> This App Developed By 
+        <a href="https://md-amran.github.io/Portfolio/" target="_blank" rel="noopener" class="developer-link">
+            <i class="fas fa-external-link-alt"></i> Md.Amran
+        </a>
+    </p>
+    <p class="footer-note">
+        <span class="warning"><i class="fas fa-exclamation-triangle"></i></span> 
+        Note: This app requires microphone permission and HTTPS connection
+    </p>
+</footer>
+        </main>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-walkie-talkie"></i> Welcome to Wave Talk</h2>
+                <p class="modal-subtitle">Please login to continue</p>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Login Form -->
+                <div class="auth-form" id="loginForm">
+                    <h3><i class="fas fa-sign-in-alt"></i> Login to Your Account</h3>
+                    
+                    <div class="form-group">
+                        <label for="loginEmail">
+                            <i class="fas fa-envelope"></i> Email Address
+                        </label>
+                        <input type="email" id="loginEmail" placeholder="you@example.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <div class="password-wrapper">
+                            <input type="password" id="loginPassword" placeholder="••••••••" required>
+                            <span class="password-toggle" id="toggleLoginPassword">
+                                <i class="fas fa-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="form-options">
+                        <label class="remember-me">
+                            <input type="checkbox" id="rememberMe">
+                            <span>Remember me</span>
+                        </label>
+                        <a href="#" id="forgotPasswordLink" class="forgot-password">Forgot Password?</a>
+                    </div>
+
+                    <button id="loginButton" class="auth-btn login-btn">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+
+                    <div class="auth-divider">
+                        <span>or</span>
+                    </div>
+
+                    <p class="auth-switch">
+                        Don't have an account? 
+                        <a href="#" id="showRegisterLink">Create Account</a>
+                    </p>
+                </div>
+
+                <!-- Register Form -->
+                <div class="auth-form" id="registerForm" style="display: none;">
+                    <h3><i class="fas fa-user-plus"></i> Create New Account</h3>
+                    
+                    <div class="form-group">
+                        <label for="registerName">
+                            <i class="fas fa-user"></i> Display Name
+                        </label>
+                        <input type="text" id="registerName" placeholder="Your Name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerEmail">
+                            <i class="fas fa-envelope"></i> Email Address
+                        </label>
+                        <input type="email" id="registerEmail" placeholder="you@example.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerPassword">
+                            <i class="fas fa-lock"></i> Password (min. 6 characters)
+                        </label>
+                        <div class="password-wrapper">
+                            <input type="password" id="registerPassword" placeholder="••••••••" minlength="6" required>
+                            <span class="password-toggle" id="toggleRegisterPassword">
+                                <i class="fas fa-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">
+                            <i class="fas fa-lock"></i> Confirm Password
+                        </label>
+                        <input type="password" id="confirmPassword" placeholder="••••••••" required>
+                    </div>
+
+                    <button id="registerButton" class="auth-btn register-btn">
+                        <i class="fas fa-user-plus"></i> Create Account
+                    </button>
+
+                    <div class="auth-divider">
+                        <span>or</span>
+                    </div>
+
+                    <p class="auth-switch">
+                        Already have an account? 
+                        <a href="#" id="showLoginLink">Login</a>
+                    </p>
+                </div>
+
+                <!-- Forgot Password Form -->
+                <div class="auth-form" id="forgotPasswordForm" style="display: none;">
+                    <h3><i class="fas fa-key"></i> Reset Password</h3>
+                    
+                    <div class="form-group">
+                        <label for="resetEmail">
+                            <i class="fas fa-envelope"></i> Enter your email
+                        </label>
+                        <input type="email" id="resetEmail" placeholder="you@example.com" required>
+                    </div>
+
+                    <button id="resetPasswordButton" class="auth-btn reset-btn">
+                        <i class="fas fa-paper-plane"></i> Send Reset Link
+                    </button>
+
+                    <p class="auth-switch">
+                        <a href="#" id="backToLoginLink">
+                            <i class="fas fa-arrow-left"></i> Back to Login
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Loading -->
+                <div id="authLoading" class="auth-loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Please wait...</p>
+                </div>
+
+                <!-- Status Message -->
+                <div id="authStatus" class="auth-status" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+
+<!-- Group Call Modal (Add before closing body tag) -->
+<div id="groupCallModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-users"></i> Group Call Feature</h2>
+            <p class="modal-subtitle">Coming Soon!</p>
+        </div>
+        
+        <div class="modal-body">
+            <div class="status-message info" style="margin-bottom: 20px;">
+                <div class="status-icon"><i class="fas fa-clock"></i></div>
+                <div class="status-content">
+                    <div class="status-title">Group Call Under Development</div>
+                    <div class="status-details">This feature is currently being developed and will be available soon.</div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; padding: 20px;">
+                <i class="fas fa-code-branch" style="font-size: 3em; color: var(--amoled-blue); margin-bottom: 15px;"></i>
+                <h3 style="color: var(--text-primary); margin-bottom: 10px;">Group Call Will Be Coming Soon Insha-Allah</h3>
+                <p style="color: var(--text-secondary); line-height: 1.6;">
+                    We're working on a feature that will allow you to connect with multiple friends at once. 
+                    Stay tuned for updates!
+                </p>
+            </div>
+            
+            <button id="closeGroupModal" class="auth-btn login-btn" style="margin-top: 20px;">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+<!-- Contact Modals (Add before closing body tag) -->
+<div id="contactModal" class="modal-overlay" style="display: none; z-index: 1002;">
+    <div class="modal-content contact-modal">
+        <!-- Modal Header -->
+        <div class="modal-header">
+            <h2><i class="fas fa-address-book"></i> Contact List</h2>
+            <p class="modal-subtitle">Manage your contacts</p>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="modal-body">
+            <!-- Search Bar -->
+            <div class="search-section">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input 
+                        type="text" 
+                        id="contactSearch" 
+                        placeholder="Search contacts..."
+                        class="search-input"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+            
+            <!-- Contacts Container -->
+            <div class="contacts-container">
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyContacts">
+                    <div class="empty-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>No contacts yet</h3>
+                    <p>Add your first contact to get started!</p>
+                </div>
+                
+                <!-- Loading State -->
+                <div class="loading-state" id="contactsLoading">
+                    <div class="spinner"></div>
+                    <p>Loading contacts...</p>
+                </div>
+                
+                <!-- Contacts List -->
+                <div class="contacts-list" id="contactsList">
+                    <!-- Contacts will be dynamically loaded here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="modal-footer contact-footer">
+            <button id="addNewContact" class="footer-btn add-btn">
+                <i class="fas fa-user-plus"></i> Add New
+            </button>
+            <button id="closeContactModal" class="footer-btn close-btn">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Contact Modal -->
+<div id="addContactModal" class="modal-overlay" style="display: none; z-index: 1003;">
+    <div class="modal-content add-contact-modal">
+        <!-- Modal Header -->
+        <div class="modal-header">
+            <h2><i class="fas fa-user-plus"></i> Add New Contact</h2>
+            <p class="modal-subtitle">Enter friend's Wave Talk ID</p>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="modal-body add-contact-body">
+            <!-- Input Field -->
+            <div class="input-section">
+                <label for="newContactId" class="input-label">
+                    <i class="fas fa-id-card"></i> Wave Talk ID
+                </label>
+                <input 
+                    type="text" 
+                    id="newContactId" 
+                    placeholder="e.g., user_abc123_4f2a"
+                    class="contact-id-input"
+                    autocomplete="off"
+                >
+                <p class="input-hint">
+                    <i class="fas fa-info-circle"></i> Enter the exact Wave Talk ID of your friend
+                </p>
+            </div>
+            
+            <!-- Contact Preview -->
+            <div class="contact-preview" id="contactPreview">
+                <div class="preview-header">
+                    <i class="fas fa-user-check"></i> Contact Found
+                </div>
+                <div class="preview-content">
+                    <div class="preview-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="preview-info">
+                        <h4 id="previewName">Loading name...</h4>
+                        <p class="preview-id" id="previewId">ID: Loading...</p>
+                        <div class="preview-status" id="previewStatus">
+                            <div class="status-dot"></div>
+                            <span>Checking status...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Status Message -->
+            <div class="status-message" id="addContactStatus"></div>
+            
+            <!-- Loading -->
+            <div class="loading-preview" id="addContactLoading">
+                <div class="spinner"></div>
+                <p>Checking contact...</p>
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="modal-footer add-contact-footer">
+            <button id="saveContact" class="footer-btn save-btn">
+                <i class="fas fa-save"></i> Save Contact
+            </button>
+            <button id="cancelAddContact" class="footer-btn cancel-btn">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+   <!-- Ringtone , Notification , Connect Sound System -->
+<audio id="ringtoneAudio" preload="auto" style="display:none;">
+    <source src="John Cena ringtone.mp3" type="audio/mpeg">
+    <source src="sounds/ringtone.ogg" type="audio/ogg">
+</audio>
+
+<audio id="notificationAudio" preload="auto" style="display:none;">
+    <source src="notification.MP3" type="audio/mpeg">
+</audio>
+
+<audio id="connectedAudio" preload="auto" style="display:none;">
+    <source src="connect.MP3" type="audio/mpeg">
+</audio>
+
+<!-- JavaScript ফাইল লোড -->
+<script src="script.js"></script>
+<script src="ringtone_sound.js"></script>
+<script src="group_call_function.js"></script>
+<!-- Contact System JavaScript -->
+<script src="contact.js"></script>
+</body>
+</html>
